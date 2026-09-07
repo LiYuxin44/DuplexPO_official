@@ -1,0 +1,8 @@
+{"schema_version":"duplexpo.v1","rollout_id":"bc-r0","window_id":"demo-001:event-0000","trace":{"speech":[{"start_s":3.0,"end_s":3.4,"termination":"eos"}]}}
+{"schema_version":"duplexpo.v1","rollout_id":"bc-r1","window_id":"demo-001:event-0000","trace":{"speech":[{"start_s":2.6,"end_s":3.2,"termination":"eos"}]}}
+{"schema_version":"duplexpo.v1","rollout_id":"bc-r2","window_id":"demo-001:event-0000","trace":{"speech":[{"start_s":3.8,"end_s":4.2,"termination":"eos"}]}}
+{"schema_version":"duplexpo.v1","rollout_id":"bc-r3","window_id":"demo-001:event-0000","trace":{"speech":[]}}
+{"schema_version":"duplexpo.v1","rollout_id":"turn-r0","window_id":"demo-001:event-0001","trace":{"speech":[{"start_s":6.0,"end_s":8.4,"termination":"eos"}]}}
+{"schema_version":"duplexpo.v1","rollout_id":"turn-r1","window_id":"demo-001:event-0001","trace":{"speech":[{"start_s":5.8,"end_s":8.2,"termination":"eos"}]}}
+{"schema_version":"duplexpo.v1","rollout_id":"turn-r2","window_id":"demo-001:event-0001","trace":{"speech":[{"start_s":6.6,"end_s":9.0,"termination":"pad"}]}}
+{"schema_version":"duplexpo.v1","rollout_id":"turn-r3","window_id":"demo-001:event-0001","trace":{"speech":[{"start_s":6.0,"end_s":null,"termination":"unknown"}]}}

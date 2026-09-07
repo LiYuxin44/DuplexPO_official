@@ -1,0 +1,118 @@
+{
+  "schema_version": "duplexpo.recipe.v1",
+  "recipe_id": "duplexpo-paper-v1",
+  "paper": "https://arxiv.org/abs/2607.07148",
+  "protocol_version": "duplexpo.v1",
+  "construction": {
+    "split_unit": "conversation",
+    "max_duration_s": 210.0,
+    "mixing": "randomized_round_robin",
+    "mixing_seed": 42,
+    "sampling_weights": {"fisher": 1.0, "seamless_hq_v1": 1.0},
+    "profile_sha256": {
+      "fisher": "f5ef275415ad37fad606011c895bddeaada08df76e9cac7123d5e40298f800a9",
+      "seamless_hq_v1": "1a64c6868997eb465c860b4dd3a02cbb5a6fb19fc22ebaa06b0c393409e03e25"
+    },
+    "augmentation": {
+      "specaugment": {"enabled": true, "implementation": "backend_native"},
+      "waveform_noise": {
+        "probability": 0.5,
+        "snr_db_uniform": [0.0, 60.0],
+        "reported_sources": ["Freesound", "MUSAN"],
+        "implementation": "input_adapter"
+      }
+    },
+    "fisher": {
+      "granularity": "word",
+      "role_policy": "first_speaker_becomes_user",
+      "word_gap_s": 0.3,
+      "turn_merge_gap_s": 1.2,
+      "lexical_bc_max_duration_s": 0.8,
+      "lexical_bc_max_words": 4,
+      "high_order_bc_max_duration_s": 1.2,
+      "high_order_bc_max_words": 6,
+      "fallback_bc_max_duration_s": 0.3,
+      "merge_strategy": "fisher"
+    },
+    "seamless_hq_v1": {
+      "granularity": "utterance",
+      "role_policy": "actor_then_prompt_then_first_speaker",
+      "turn_merge_gap_s": 1.0,
+      "utterance_bc_max_duration_s": 2.0,
+      "utterance_bc_max_words": 6,
+      "fragment_max_duration_s": 0.3,
+      "fragment_max_words": 2,
+      "excluded_interaction_types": ["charades"],
+      "merge_strategy": "seamless"
+    },
+    "backchannel_lexicon": {
+      "unigrams": 340,
+      "bigrams": 221,
+      "trigrams": 153,
+      "quadgrams": 71,
+      "pentagrams": 17,
+      "historical_sha256": "5e46a4f9e5a40b3413de81ad77e2b3e06bed3d3b1c9c6482e84b6a0474d1c681"
+    }
+  },
+  "windows": {
+    "frame_duration_s": 0.08,
+    "training_lead_time_s": 1.0,
+    "validation_lead_time_s": 2.0,
+    "buffer_s": 2.0,
+    "min_window_start_s": 2.0,
+    "min_turn_duration_s": 2.0,
+    "min_backchannel_duration_s": 0.0,
+    "max_turn_windows": 3,
+    "max_backchannel_windows": 1,
+    "max_rollout_frames": 200,
+    "selection_seed": 42,
+    "portable_selection_seed_strategy": "sha256(seed:conversation_id)",
+    "historical_selection_seed_strategy": "target_token_ids[0]+target_token_ids[min(T//2,T-1)]",
+    "historical_replay_override_metadata_key": "window_selection_seed"
+  },
+  "rollout": {
+    "samples_per_window": 4,
+    "temperature": 1.0,
+    "top_p": 0.9
+  },
+  "reward": {
+    "mode": "legacy",
+    "backchannel_plateau_s": 0.5,
+    "backchannel_max_talk_s": 1.5,
+    "turn_sigma_early_s": 0.2,
+    "turn_sigma_late_s": 0.5,
+    "miss_penalty": -0.5,
+    "false_alarm_penalty": -0.5,
+    "backchannel_overlong_penalty": -0.5,
+    "turn_no_eos_scale": 0.75,
+    "observable_margin_s": 0.16,
+    "interruption_grace_s": 0.16,
+    "stop_tolerance_s": 0.24,
+    "explicit_eos_bonus": 0.05,
+    "near_target_pad_penalty": -0.02,
+    "early_stop_penalty": -0.15,
+    "late_stop_penalty": -0.1
+  },
+  "grpo": {
+    "group_key": "window_id",
+    "advantage_normalization": "population_mean_std_per_event",
+    "advantage_epsilon": 1e-8,
+    "advantage_clip": 5.0,
+    "loss_mask": "sampled_actions_only",
+    "token_reduction": "sum_then_divide_by_real_rollouts",
+    "kl_estimator": "exp(log_ratio)-log_ratio-1",
+    "kl_beta": 0.2,
+    "kl_log_ratio_clip": 10.0,
+    "kl_value_clip": 20.0,
+    "reference_fallback": "behavior_logprobs"
+  },
+  "optimizer": {
+    "name": "AdamW",
+    "learning_rate": 1e-5,
+    "betas": [0.9, 0.98],
+    "weight_decay": 0.0,
+    "scheduler": "inverse_square_root",
+    "warmup_steps": 100,
+    "minimum_learning_rate": 1e-6
+  }
+}

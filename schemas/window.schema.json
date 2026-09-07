@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://duplexpo.dev/schemas/window.v1.json",
+  "title": "DuplexPO dynamics-critical window v1",
+  "type": "object",
+  "required": ["schema_version", "window_id", "conversation_id", "split", "frame_duration_s", "sample_start_frame", "sample_end_frame", "reference_start_frame", "reference_end_frame", "event_kind"],
+  "properties": {
+    "schema_version": {"const": "duplexpo.v1"},
+    "window_id": {"type": "string", "minLength": 1},
+    "conversation_id": {"type": "string", "minLength": 1},
+    "split": {"type": "string"},
+    "frame_duration_s": {"type": "number", "exclusiveMinimum": 0},
+    "sample_start_frame": {"type": "integer", "minimum": 0},
+    "sample_end_frame": {"type": "integer", "minimum": 1},
+    "reference_start_frame": {"type": "integer", "minimum": 0},
+    "reference_end_frame": {"type": "integer", "minimum": 0},
+    "event_kind": {"enum": ["turn", "backchannel"]},
+    "user_segments": {"type": "array", "items": {"type": "object"}},
+    "source": {"type": "string"},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

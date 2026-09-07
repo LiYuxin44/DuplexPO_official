@@ -1,0 +1,31 @@
+{
+  "errors": [],
+  "ok": true,
+  "stats": {
+    "records": {
+      "group_count": 2,
+      "group_sizes": {
+        "demo-001:event-0000": 4,
+        "demo-001:event-0001": 4
+      },
+      "mode": "reward",
+      "record_count": 8
+    },
+    "rollouts": {
+      "actionless_rollouts": 8,
+      "group_sizes": {
+        "demo-001:event-0000": 4,
+        "demo-001:event-0001": 4
+      },
+      "mode": "reward",
+      "rollout_count": 8,
+      "rollouts_without_kl_reference": 8,
+      "window_count": 2
+    },
+    "windows": 2
+  },
+  "warnings": [
+    "8 rollout(s) are reward-only traces; add action_ids before policy optimization",
+    "8 rollout(s) lack KL reference logprobs; valid for reward conformance only"
+  ]
+}

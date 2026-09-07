@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://duplexpo.dev/schemas/grpo-record.v1.json",
+  "title": "DuplexPO trainer record v1",
+  "type": "object",
+  "required": ["schema_version", "group_id", "rollout_id", "window", "action_ids", "loss_mask", "reward", "advantage"],
+  "properties": {
+    "schema_version": {"const": "duplexpo.grpo.v1"},
+    "group_id": {"type": "string"},
+    "rollout_id": {"type": "string"},
+    "window": {"type": "object"},
+    "action_ids": {"type": "array", "items": {"type": "integer"}},
+    "loss_mask": {"type": "array", "items": {"type": "boolean"}},
+    "behavior_logprobs": {"type": "array", "items": {"type": "number"}},
+    "reference_logprobs": {"type": "array", "items": {"type": "number"}},
+    "reward": {"type": "number"},
+    "reward_components": {"type": "object", "additionalProperties": {"type": "number"}},
+    "reward_diagnostics": {"type": "object"},
+    "advantage": {"type": "number"},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

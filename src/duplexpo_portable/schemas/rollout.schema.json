@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://duplexpo.dev/schemas/rollout.v1.json",
+  "title": "DuplexPO rollout v1",
+  "type": "object",
+  "required": ["schema_version", "rollout_id", "window_id"],
+  "anyOf": [{"required": ["action_ids"]}, {"required": ["trace"]}],
+  "properties": {
+    "schema_version": {"const": "duplexpo.v1"},
+    "rollout_id": {"type": "string", "minLength": 1},
+    "window_id": {"type": "string", "minLength": 1},
+    "action_ids": {"type": "array", "items": {"type": "integer"}, "minItems": 1},
+    "trace": {
+      "type": "object",
+      "required": ["speech"],
+      "properties": {
+        "speech": {"type": "array", "items": {"type": "object"}},
+        "metadata": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "behavior_logprobs": {"type": "array", "items": {"type": "number"}},
+    "reference_logprobs": {"type": "array", "items": {"type": "number"}},
+    "loss_mask": {"type": "array", "items": {"type": "boolean"}},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}
