@@ -32,5 +32,5 @@ Audit date: 2026-09-06
   paper settings remain machine-readable in the recipe.
 - The portable window-selection RNG uses conversation-ID hashing by default.
   Historical token-derived seeding is available through an explicit override.
-- A repository owner must choose the public license and author/citation metadata
-  before publication; these are governance decisions, not missing algorithm code.
+- The portable code is licensed under MIT. Author/citation metadata and
+  institutional publication authority remain owner-governed release decisions.

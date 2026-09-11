@@ -102,8 +102,9 @@ licensed source data into `Conversation` records. Audio paths or tensors can be
 carried through `metadata`; the construction and GRPO protocol itself does not
 read audio.
 
-## Release status
+## License and release status
 
-This is a clean-room portable layer inside the working repository, not yet a
-publishable legal release. A repository owner must select and add a license and
-complete `docs/RELEASE_CHECKLIST.md` before public distribution.
+The portable DuplexPO code in this repository is released under the
+[MIT License](LICENSE). Dataset audio/transcripts, model checkpoints, and
+third-party model code are not included or relicensed. Complete the remaining
+items in `docs/RELEASE_CHECKLIST.md` when preparing a tagged public release.

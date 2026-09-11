@@ -3,7 +3,8 @@
 The code organization is ready for review, but these owner decisions and
 artifact checks must happen before publishing:
 
-- [ ] Select a license and add `LICENSE`; verify employer/institution ownership.
+- [x] Select a license and add `LICENSE` (MIT).
+- [ ] Verify employer/institution ownership and authority to publish.
 - [ ] Confirm author list, project name, contact, and citation/BibTeX.
 - [ ] Review the English backchannel phrase list for redistribution and bias.
 - [ ] Publish hashes/versions for the exact Fisher and Seamless construction

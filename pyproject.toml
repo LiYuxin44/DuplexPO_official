@@ -9,6 +9,8 @@ description = "Framework-neutral data construction and event-level GRPO for full
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{name = "DuplexPO authors"}]
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License"]
 dependencies = []
 
 [project.optional-dependencies]
