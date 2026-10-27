@@ -137,7 +137,7 @@ def score_fcdr(
     trace: ActionTrace,
     config: FCDRConfig = FCDRConfig(),
 ) -> RewardResult:
-    """Score onset, backchannel pattern, and yielding without model dependencies."""
+    """Score onset and backchannel pattern of ``trace.speech[0]`` without model dependencies."""
 
     prediction = trace.speech[0] if trace.speech else None
     has_reference = window.reference_end_frame > window.reference_start_frame
