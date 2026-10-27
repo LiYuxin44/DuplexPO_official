@@ -112,7 +112,9 @@ Values are the ones used for the paper checkpoint (`recipes/paper_v1.json`,
   frozen), 64 x A800 80 GB, bfloat16, gradient clip 1.0;
 - 4 rollouts per window (GRPO group size), temperature 1.0, top-p 0.9;
 - `total_steps`: a few tens of steps — exact value in the recipe;
-- `windows_per_step`: exact value in the recipe;
+- the batch unit is the conversation (`conversations_per_step` in the recipe);
+  every selected window of each conversation in the batch is used, so the
+  number of windows (and rollouts) per step is not fixed;
 - AdamW, lr `1e-5` with 100 warm-up steps and inverse-square-root decay to
   `1e-6`. This is the **full-parameter** learning rate. With LoRA adapters the
   policy does not move within tens of steps at `1e-5`; use roughly 10x
