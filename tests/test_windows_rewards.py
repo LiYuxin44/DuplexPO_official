@@ -1,7 +1,7 @@
 import unittest
 
 from duplexpo_portable.construction import construct_conversation, profile_named
-from duplexpo_portable.rewards import FCDRConfig, TokenTraceDecoder, score_fcdr
+from duplexpo_portable.rewards import FCDRConfig, SilenceEosTraceDecoder, TokenTraceDecoder, score_fcdr
 from duplexpo_portable.schema import ActionTrace, Rollout, Segment, SpeechInterval
 from duplexpo_portable.windows import WindowConfig, build_selected_windows, historical_token_selection_seed
 from tests.test_construction import demo_conversation
@@ -71,6 +71,22 @@ class WindowsAndRewardsTest(unittest.TestCase):
         self.assertAlmostEqual(trace.speech[0].start_s, 2.08)
         self.assertAlmostEqual(trace.speech[0].end_s, 2.32)
         self.assertEqual(trace.speech[0].termination, "eos")
+
+    def test_silence_eos_trace_decoder(self):
+        window = demo_windows()[0]
+        decoder = SilenceEosTraceDecoder(silence_ids={0}, eos_id=2)
+        # PAD PAD text text EOS PAD text ...  -> speech[0] = frames 2..4, restart at 6 never closed
+        rollout = Rollout("r", window.window_id, action_ids=(0, 0, 7, 8, 2, 0, 9, 9))
+        trace = decoder.decode(rollout, window)
+        self.assertEqual(len(trace.speech), 2)
+        self.assertAlmostEqual(trace.speech[0].start_s, (window.sample_start_frame + 2) * 0.08)
+        self.assertAlmostEqual(trace.speech[0].end_s, (window.sample_start_frame + 4) * 0.08)
+        self.assertEqual(trace.speech[0].termination, "eos")
+        self.assertIsNone(trace.speech[1].end_s)
+        self.assertTrue(score_fcdr(window, trace).diagnostics["restart_after_eos"])
+        silent = decoder.decode(Rollout("s", window.window_id, action_ids=(0, 0, 0)), window)
+        self.assertEqual(silent.speech, ())
+        self.assertEqual(score_fcdr(window, silent).total, -0.5)
 
     def test_restart_after_eos_is_reported_not_scored(self):
         turn = demo_windows()[1]

@@ -115,15 +115,14 @@
     "parameterization": "full_parameter",
     "trainable_modules": "llm_backbone",
     "frozen_modules": ["speech_encoder", "codec"],
-    "total_steps": null,
     "batch_unit": "conversation",
-    "conversations_per_step": null,
     "windows_per_conversation": "variable; all selected windows of the conversation (at most 3 full-turn + 1 backchannel)",
     "samples_per_window": 4,
     "gpus": {"count": 64, "type": "A800-80GB"},
     "precision": "bfloat16",
     "gradient_clip_norm": 1.0,
     "notes": [
+      "Step count and conversations per step are chosen per model/setup (the reported run converged within a few tens of steps); the recipe does not fix them.",
       "learning_rate 1e-5 in `optimizer` is the full-parameter RL learning rate.",
       "With LoRA adapters the policy does not move within tens of steps at lr 1e-5; use roughly 10x (about 1e-4) and tune.",
       "The batch is formed from conversations, not from a fixed number of windows: every selected window of each conversation in the batch is used, so windows (and rollouts = windows * 4) per step vary with the data."

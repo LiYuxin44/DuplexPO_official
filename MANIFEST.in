@@ -1,6 +1,5 @@
 include README.md
 include LICENSE
 recursive-include docs *.md
-recursive-include schemas *.json
 recursive-include examples *.json *.jsonl *.md SHA256SUMS
 recursive-include tests *.py

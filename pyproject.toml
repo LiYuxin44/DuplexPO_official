@@ -8,7 +8,16 @@ version = "0.1.0"
 description = "Framework-neutral data construction and event-level GRPO for full-duplex conversational models"
 readme = "README.md"
 requires-python = ">=3.9"
-authors = [{name = "DuplexPO authors"}]
+authors = [
+  {name = "Yuxin Li"},
+  {name = "Donghang Wu"},
+  {name = "Guan-Ting Lin"},
+  {name = "Hung-yi Lee"},
+  {name = "Chengwei Qin"},
+  {name = "Zhehuai Chen"},
+  {name = "Chen Chen"},
+]
+urls = {Paper = "https://arxiv.org/abs/2607.07148"}
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dependencies = []

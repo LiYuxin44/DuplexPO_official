@@ -70,6 +70,51 @@ class TokenTraceDecoder:
         )
 
 
+class SilenceEosTraceDecoder:
+    """Decode vocabularies without an explicit BOS token.
+
+    Speech starts at the first frame whose action is not in ``silence_ids``
+    (e.g. PAD/silence) and not ``eos_id``; it ends at the first ``eos_id`` after
+    that (``termination="eos"``) or at the first return to a silence token when
+    ``silence_ends_speech`` is set (``termination="pad"``). This covers text-stream
+    models that emit PAD while silent, text tokens while speaking and EOS to yield.
+    """
+
+    def __init__(self, *, silence_ids: Iterable[int], eos_id: int, silence_ends_speech: bool = False):
+        self.silence_ids = frozenset(int(item) for item in silence_ids)
+        self.eos_id = int(eos_id)
+        self.silence_ends_speech = bool(silence_ends_speech)
+        if not self.silence_ids:
+            raise ValueError("silence_ids must not be empty")
+
+    def decode(self, rollout: Rollout, window: Window) -> ActionTrace:
+        speech: list[SpeechInterval] = []
+        start_position = None
+        for index, token in enumerate(rollout.action_ids):
+            is_silence = token in self.silence_ids
+            if start_position is None:
+                if not is_silence and token != self.eos_id:
+                    start_position = index
+                continue
+            if token == self.eos_id or (is_silence and self.silence_ends_speech):
+                kind = "eos" if token == self.eos_id else "pad"
+                speech.append(self._interval(window, start_position, index, kind))
+                start_position = None
+        if start_position is not None:
+            speech.append(self._interval(window, start_position, None, "unknown"))
+        return ActionTrace(
+            speech=tuple(speech),
+            metadata={"decoder": "silence_eos_v1", "bos_found": bool(speech)},
+        )
+
+    @staticmethod
+    def _interval(window: Window, start: int, stop: int | None, kind: str) -> SpeechInterval:
+        frame = window.frame_duration_s
+        start_s = (window.sample_start_frame + start) * frame
+        end_s = None if stop is None else (window.sample_start_frame + stop) * frame
+        return SpeechInterval(start_s=start_s, end_s=end_s, termination=kind)
+
+
 def _next_user_start(window: Window, anchor_s: float) -> float | None:
     for segment in sorted(window.user_segments, key=lambda item: item.start_s):
         if anchor_s <= segment.start_s <= window.sample_end_s:

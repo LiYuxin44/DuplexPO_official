@@ -15,6 +15,7 @@ class CliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             windows = Path(directory) / "windows.jsonl"
             audit = Path(directory) / "audit.jsonl"
+            segments = Path(directory) / "segments.jsonl"
             records = Path(directory) / "records.jsonl"
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
@@ -29,6 +30,8 @@ class CliTest(unittest.TestCase):
                         str(windows),
                         "--audit-output",
                         str(audit),
+                        "--segments-output",
+                        str(segments),
                     ]
                 )
                 main(
@@ -57,6 +60,13 @@ class CliTest(unittest.TestCase):
             values = list(read_jsonl(records))
             self.assertEqual(len(values), 8)
             self.assertTrue(all(value["schema_version"] == "duplexpo.grpo.v1" for value in values))
+            segment_rows = list(read_jsonl(segments))
+            self.assertEqual(len(segment_rows), 1)
+            window_rows = list(read_jsonl(windows))
+            # every selected window's reference event is one of the exported agent segments
+            exported = {json.dumps(item, sort_keys=True) for item in segment_rows[0]["agent_segments"]}
+            for row in window_rows:
+                self.assertIn(json.dumps(row["metadata"]["agent_segment"], sort_keys=True), exported)
             self.assertEqual(windows.read_text(), (root / "examples" / "expected" / "windows.jsonl").read_text())
             self.assertEqual(audit.read_text(), (root / "examples" / "expected" / "audit.jsonl").read_text())
             self.assertEqual(records.read_text(), (root / "examples" / "expected" / "grpo_records.jsonl").read_text())

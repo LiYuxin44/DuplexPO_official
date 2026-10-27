@@ -9,11 +9,29 @@ contains frame bounds and source metadata, so the adapter can slice its native
 audio/tensor representation and prefill the prefix. Return `Rollout` objects;
 use a shared `window_id` for all samples from the same event.
 
+Render the teacher-forced agent prefix (frames before `sample_start_frame`)
+from the segments exported by `duplexpo construct --segments-output`, never
+from a re-segmentation of the raw transcript. The reward's reference event is
+`window.metadata.agent_segment`, which is one of those segments; if the prefix
+is built from different boundaries the agent may already be "speaking" at the
+window start and even the human continuation scores poorly.
+
 ## Action interpretation
 
 If the model directly emits speech intervals, attach `ActionTrace`. If it emits
-tokens, implement `TraceDecoder.decode(rollout, window)`. The included
-`TokenTraceDecoder` covers one BOS, one EOS, and PAD-as-stop frame vocabularies.
+tokens, implement `TraceDecoder.decode(rollout, window)`. Two decoders are
+included:
+
+- `TokenTraceDecoder(bos_ids, eos_id, pad_id)` for vocabularies with an explicit
+  speech BOS (CLI: `--bos-ids 1 --eos-id 2 --pad-id 0`);
+- `SilenceEosTraceDecoder(silence_ids, eos_id)` for text-stream models without
+  BOS that emit PAD/silence while quiet, text tokens while speaking and EOS to
+  yield (CLI: `--silence-ids 0 --eos-id 2`). Speech starts at the first
+  non-silence token.
+
+`action_ids` must be one action per frame of the sampled span, in order, so that
+index `i` maps to `sample_start_frame + i`. Only `speech[0]` is scored; later
+segments are reported through `restart_after_eos` / `extra_speech_segments`.
 
 ## Trainer
 

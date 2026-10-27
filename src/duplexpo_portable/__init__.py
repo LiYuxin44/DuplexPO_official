@@ -4,7 +4,7 @@ from .construction import ConstructionProfile, construct_conversation, profile_n
 from .conformance import ConformanceReport, check_grpo_records, check_policy_adapter, check_rollouts
 from .grpo import GRPOConfig, build_grpo_records, normalize_grouped_advantages
 from .recipe import load_paper_recipe, paper_grpo_config, paper_reward_config, paper_window_config, recipe_fingerprint
-from .rewards import FCDRConfig, TokenTraceDecoder, score_fcdr
+from .rewards import FCDRConfig, SilenceEosTraceDecoder, TokenTraceDecoder, score_fcdr
 from .schema import ActionTrace, Conversation, GRPORecord, Rollout, Segment, SpeechInterval, TranscriptUnit, Window, load_json_schema
 from .windows import WindowConfig, build_windows, historical_token_selection_seed, select_windows
 
@@ -19,6 +19,7 @@ __all__ = [
     "Rollout",
     "Segment",
     "SpeechInterval",
+    "SilenceEosTraceDecoder",
     "TokenTraceDecoder",
     "TranscriptUnit",
     "Window",

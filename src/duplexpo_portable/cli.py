@@ -13,12 +13,19 @@ from .grpo import GRPOConfig, build_grpo_records
 from .io import read_jsonl, write_jsonl
 from .pipeline import prepare_grpo_update, score_rollouts
 from .recipe import load_paper_recipe, recipe_fingerprint
-from .rewards import FCDRConfig, TokenTraceDecoder
+from .rewards import FCDRConfig, SilenceEosTraceDecoder, TokenTraceDecoder
 from .schema import Conversation, GRPORecord, RewardResult, Rollout, Window
 from .windows import WindowConfig, build_selected_windows
 
 
 def _decoder(args):
+    if getattr(args, "silence_ids", None) is not None:
+        if args.bos_ids is not None:
+            raise ValueError("--silence-ids and --bos-ids are mutually exclusive")
+        if args.eos_id is None:
+            raise ValueError("--eos-id is required with --silence-ids")
+        silence_ids = [int(item) for item in args.silence_ids.split(",") if item.strip()]
+        return SilenceEosTraceDecoder(silence_ids=silence_ids, eos_id=args.eos_id)
     if args.bos_ids is None:
         return None
     bos_ids = [int(item) for item in args.bos_ids.split(",") if item.strip()]
@@ -42,6 +49,7 @@ def cmd_construct(args) -> None:
     recipe_sha256 = recipe_fingerprint(recipe)
     windows: list[dict] = []
     audits: list[dict] = []
+    segments: list[dict] = []
     for value in read_jsonl(args.input):
         conversation = Conversation.from_dict(value)
         split_source = "input" if conversation.split else "sha256(seed:conversation_id)"
@@ -54,6 +62,17 @@ def cmd_construct(args) -> None:
         audits.append(audit)
         if audit["status"] != "kept":
             continue
+        segments.append(
+            {
+                "conversation_id": conversation.conversation_id,
+                "split": split,
+                "source": conversation.source,
+                "construction_profile": profile.name,
+                "construction_profile_sha256": profile.fingerprint(),
+                "user_segments": [segment.to_dict() for segment in user_segments],
+                "agent_segments": [segment.to_dict() for segment in agent_segments],
+            }
+        )
         selected = build_selected_windows(
             conversation_id=conversation.conversation_id,
             split=split,
@@ -84,6 +103,8 @@ def cmd_construct(args) -> None:
     count = write_jsonl(args.output, windows)
     if args.audit_output:
         write_jsonl(args.audit_output, audits)
+    if args.segments_output:
+        write_jsonl(args.segments_output, segments)
     print(json.dumps({"windows": count, "conversations": len(audits), "output": args.output}))
 
 
@@ -215,6 +236,10 @@ def cmd_conformance(args) -> None:
 
 def _add_decoder_arguments(parser) -> None:
     parser.add_argument("--bos-ids", help="comma-separated speech BOS token IDs; omit for trace rollouts")
+    parser.add_argument(
+        "--silence-ids",
+        help="comma-separated silence/PAD token IDs for vocabularies without BOS (speech = first non-silence token)",
+    )
     parser.add_argument("--eos-id", type=int)
     parser.add_argument("--pad-id", type=int)
 
@@ -227,6 +252,10 @@ def build_parser() -> argparse.ArgumentParser:
     construct.add_argument("--input", required=True)
     construct.add_argument("--output", required=True)
     construct.add_argument("--audit-output")
+    construct.add_argument(
+        "--segments-output",
+        help="per-conversation user/agent segments (start, end, kind, text); render teacher-forced prefixes from this",
+    )
     construct.add_argument("--profile", choices=("fisher", "seamless"), required=True)
     construct.add_argument("--seed", type=int, default=42)
     construct.set_defaults(function=cmd_construct)

@@ -1,6 +1,6 @@
 # I/O protocol v1
 
-The JSON Schemas in `schemas/` are normative and are also bundled in the wheel;
+The JSON Schemas in `src/duplexpo_portable/schemas/` are normative and are bundled in the wheel;
 `load_json_schema("conversation")` (or `window`, `rollout`, `grpo_record`,
 `recipe`) loads them after installation. Python dataclasses provide stricter
 cross-field validation.
