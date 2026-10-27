@@ -61,7 +61,7 @@ Given the synthetic examples, verify that it:
 1. returns exactly four rollouts for each selected event;
 2. preserves `window_id` through generation and collation;
 3. produces an action-aligned `loss_mask`;
-4. preserves reference/behavior logprobs at every valid action;
+4. preserves frozen-reference (and behavior) logprobs at every valid action;
 5. matches `sequence_objective` numerically on a small fixed batch;
 6. produces zero advantage when all rewards in an event are identical;
 7. never mixes events with the same batch position but different IDs.

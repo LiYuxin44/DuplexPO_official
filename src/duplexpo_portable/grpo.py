@@ -18,6 +18,16 @@ class GRPOConfig:
     kl_beta: float = 0.2
     kl_log_ratio_clip: float = 10.0
     kl_value_clip: float = 20.0
+    # "frozen": the KL reference must be the frozen SFT policy's logprobs
+    # (``Rollout.reference_logprobs``); rollouts that carry behavior logprobs but
+    # no reference logprobs are rejected so the KL term cannot silently collapse
+    # to an on-policy trust region (log-ratio == 0 at every update).
+    # "behavior": explicitly use the rollout behavior logprobs instead.
+    kl_reference: str = "frozen"
+
+    def __post_init__(self) -> None:
+        if self.kl_reference not in {"frozen", "behavior"}:
+            raise ValueError("kl_reference must be 'frozen' or 'behavior'")
 
 
 def normalize_grouped_advantages(
@@ -68,9 +78,16 @@ def build_grpo_records(
         except KeyError as error:
             raise ValueError(f"missing conditioning window {rollout.window_id}") from error
         loss_mask = rollout.loss_mask or tuple(True for _ in rollout.action_ids)
-        # The paper checkpoint uses frozen-reference logprobs when present and
-        # otherwise the rollout behavior policy as the KL reference.
-        kl_reference = rollout.reference_logprobs or rollout.behavior_logprobs
+        if config.kl_reference == "behavior":
+            kl_reference = rollout.behavior_logprobs
+        else:
+            kl_reference = rollout.reference_logprobs
+            if not kl_reference and rollout.behavior_logprobs and config.kl_beta > 0:
+                raise ValueError(
+                    f"rollout {rollout.rollout_id} has behavior logprobs but no frozen-reference "
+                    "logprobs; supply Rollout.reference_logprobs from the frozen SFT policy, or opt in "
+                    "to GRPOConfig(kl_reference='behavior') / --kl-reference behavior"
+                )
         records.append(
             GRPORecord(
                 group_id=rollout.window_id,

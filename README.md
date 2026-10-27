@@ -96,8 +96,8 @@ share internal classes with this package.
 - per-event population mean/std reward normalization, epsilon `1e-8`, clipped
   to `[-5, 5]`;
 - sampled-token-only policy gradient;
-- Schulman KL estimator against frozen-reference logprobs when supplied,
-  otherwise rollout-behavior logprobs, with beta `0.2`;
+- Schulman KL estimator against frozen SFT reference logprobs with beta `0.2`
+  (behavior logprobs only by explicit opt-in);
 - the reported FCDR reward (onset Gaussian, backchannel plateau, 0.75 no-stop
   scale);
 - training setup (full-parameter, 64 x A800, lr 1e-5, conversation-level

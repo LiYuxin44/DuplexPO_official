@@ -100,7 +100,7 @@
     "kl_beta": 0.2,
     "kl_log_ratio_clip": 10.0,
     "kl_value_clip": 20.0,
-    "reference_fallback": "behavior_logprobs"
+    "kl_reference": "frozen"
   },
   "optimizer": {
     "name": "AdamW",

@@ -87,10 +87,14 @@ KL_hat = exp(x) - x - 1
 L = L_policy + beta/N * sum KL_hat,  beta = 0.2
 ```
 
-The reference is a frozen policy when available; otherwise stored rollout
-behavior logprobs provide the semi-offline reference. The reference code clips
-the exponential input to `[-10, 10]` and each estimate above at 20, matching the
-historical implementation.
+`log pi_ref` comes from the frozen SFT policy (`Rollout.reference_logprobs`).
+`build_grpo_records` rejects rollouts that carry behavior logprobs without
+reference logprobs: with the behavior policy as anchor the estimator is zero
+with zero gradient at every on-policy update, i.e. no regularization at all.
+Using behavior logprobs is possible only as an explicit opt-in
+(`GRPOConfig(kl_reference="behavior")` / `--kl-reference behavior`). The
+reference code clips the exponential input to `[-10, 10]` and each estimate
+above at 20, matching the historical implementation.
 
 ## Backend responsibilities
 

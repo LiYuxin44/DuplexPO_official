@@ -146,7 +146,9 @@ def _load_scored(path: str):
 
 def cmd_grpo(args) -> None:
     windows = _load_windows(args.windows)
-    records = build_grpo_records(_load_scored(args.input), windows, GRPOConfig(kl_beta=args.kl_beta))
+    records = build_grpo_records(
+        _load_scored(args.input), windows, GRPOConfig(kl_beta=args.kl_beta, kl_reference=args.kl_reference)
+    )
     count = write_jsonl(args.output, records)
     sizes: dict[str, int] = {}
     for record in records:
@@ -171,7 +173,7 @@ def cmd_prepare(args) -> None:
         rollouts,
         decoder=_decoder(args),
         reward_config=FCDRConfig(),
-        grpo_config=GRPOConfig(kl_beta=args.kl_beta),
+        grpo_config=GRPOConfig(kl_beta=args.kl_beta, kl_reference=args.kl_reference),
     )
     write_jsonl(args.output, records)
     print(json.dumps({**audit, "output": args.output}, sort_keys=True))
@@ -244,6 +246,16 @@ def _add_decoder_arguments(parser) -> None:
     parser.add_argument("--pad-id", type=int)
 
 
+def _add_kl_reference_argument(parser) -> None:
+    parser.add_argument(
+        "--kl-reference",
+        choices=("frozen", "behavior"),
+        default="frozen",
+        help="KL anchor: frozen SFT reference logprobs (paper; required when behavior logprobs are present) "
+        "or, explicitly, the rollout behavior logprobs",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="duplexpo")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -272,6 +284,7 @@ def build_parser() -> argparse.ArgumentParser:
     grpo.add_argument("--windows", required=True)
     grpo.add_argument("--output", required=True)
     grpo.add_argument("--kl-beta", type=float, default=0.2)
+    _add_kl_reference_argument(grpo)
     grpo.set_defaults(function=cmd_grpo)
 
     prepare = subparsers.add_parser("prepare", help="windows + rollouts -> ready-to-train GRPO records")
@@ -279,6 +292,7 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--rollouts", required=True)
     prepare.add_argument("--output", required=True)
     prepare.add_argument("--kl-beta", type=float, default=0.2)
+    _add_kl_reference_argument(prepare)
     _add_decoder_arguments(prepare)
     prepare.set_defaults(function=cmd_prepare)
 

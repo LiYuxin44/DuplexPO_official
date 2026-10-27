@@ -60,4 +60,5 @@ def paper_grpo_config() -> GRPOConfig:
         kl_beta=float(value["kl_beta"]),
         kl_log_ratio_clip=float(value["kl_log_ratio_clip"]),
         kl_value_clip=float(value["kl_value_clip"]),
+        kl_reference=str(value.get("kl_reference", "frozen")),
     )
