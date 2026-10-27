@@ -68,6 +68,7 @@ def cmd_construct(args) -> None:
                 if conversation.metadata.get("window_selection_seed") is None
                 else int(conversation.metadata["window_selection_seed"])
             ),
+            audit=audit,
         )
         for window in selected:
             metadata = dict(window.metadata)
@@ -93,7 +94,7 @@ def cmd_score(args) -> None:
         windows,
         rollouts,
         decoder=_decoder(args),
-        reward_config=FCDRConfig(mode=args.reward_mode),
+        reward_config=FCDRConfig(),
     )
     rows = [
         {
@@ -148,7 +149,7 @@ def cmd_prepare(args) -> None:
         windows,
         rollouts,
         decoder=_decoder(args),
-        reward_config=FCDRConfig(mode=args.reward_mode),
+        reward_config=FCDRConfig(),
         grpo_config=GRPOConfig(kl_beta=args.kl_beta),
     )
     write_jsonl(args.output, records)
@@ -234,7 +235,6 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--windows", required=True)
     score.add_argument("--rollouts", required=True)
     score.add_argument("--output", required=True)
-    score.add_argument("--reward-mode", choices=("legacy", "eos_aware_v1"), default="legacy")
     _add_decoder_arguments(score)
     score.set_defaults(function=cmd_score)
 
@@ -249,7 +249,6 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--windows", required=True)
     prepare.add_argument("--rollouts", required=True)
     prepare.add_argument("--output", required=True)
-    prepare.add_argument("--reward-mode", choices=("legacy", "eos_aware_v1"), default="legacy")
     prepare.add_argument("--kl-beta", type=float, default=0.2)
     _add_decoder_arguments(prepare)
     prepare.set_defaults(function=cmd_prepare)

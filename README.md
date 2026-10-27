@@ -73,7 +73,10 @@ share internal classes with this package.
 - sampled-token-only policy gradient;
 - Schulman KL estimator against frozen-reference logprobs when supplied,
   otherwise rollout-behavior logprobs, with beta `0.2`;
-- the reported `legacy` FCDR reward plus the post-paper `eos_aware_v1` option.
+- the reported FCDR reward (onset Gaussian, backchannel plateau, 0.75 no-stop
+  scale);
+- training scale (full-parameter, 64 x A800, lr 1e-5, step counts) recorded in
+  `recipes/paper_v1.json` under `training`.
 
 See `docs/ALGORITHM.md` for equations and fidelity notes.
 

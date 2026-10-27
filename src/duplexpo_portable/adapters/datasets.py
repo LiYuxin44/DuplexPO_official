@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+import math
 import re
 from typing import Any
 
@@ -32,9 +33,37 @@ PROMPT_RESPONDER_PATTERNS = (
 )
 
 
+MAX_UNTIMED_FRACTION = 0.2
+"""Default upper bound on the share of a speaker's units without usable timing."""
+
+
+def _timing(value: Mapping[str, Any]) -> tuple[float, float] | None:
+    """Return ``(start, end)`` or ``None`` when either timestamp is missing/non-finite.
+
+    Word- and utterance-level alignments from both Fisher-style and Seamless-style
+    sources occasionally carry ``null`` timestamps (numerals, non-lexical marks).
+    They cannot be placed on the frame grid and must be dropped rather than
+    interpolated, otherwise onset labels become guesses.
+    """
+
+    start, end = value.get("start"), value.get("end")
+    if start is None or end is None:
+        return None
+    try:
+        start_f, end_f = float(start), float(end)
+    except (TypeError, ValueError):
+        return None
+    if not (math.isfinite(start_f) and math.isfinite(end_f)):
+        return None
+    return start_f, end_f
+
+
 def _shifted_unit(speaker: str, value: Mapping[str, Any], shift_s: float, text_key: str):
-    start = float(value["start"]) - shift_s
-    end = float(value["end"]) - shift_s
+    timing = _timing(value)
+    if timing is None:
+        return None
+    start = timing[0] - shift_s
+    end = timing[1] - shift_s
     if end <= 0:
         return None
     start = max(0.0, start)
@@ -44,6 +73,23 @@ def _shifted_unit(speaker: str, value: Mapping[str, Any], shift_s: float, text_k
     if not text:
         return None
     return TranscriptUnit(speaker, start, end, text)
+
+
+def _untimed_audit(
+    channels: Mapping[str, Sequence[Mapping[str, Any]]], max_untimed_fraction: float
+) -> dict[str, Any]:
+    """Count units without timing per canonical speaker and flag excessive loss."""
+
+    dropped = {speaker: sum(1 for value in values if _timing(value) is None) for speaker, values in channels.items()}
+    fraction = {
+        speaker: (dropped[speaker] / len(values) if values else 0.0) for speaker, values in channels.items()
+    }
+    return {
+        "untimed_units_dropped": dropped,
+        "untimed_fraction": fraction,
+        "untimed_fraction_exceeded": any(value > max_untimed_fraction for value in fraction.values()),
+        "max_untimed_fraction": max_untimed_fraction,
+    }
 
 
 def from_fisher_alignments(
@@ -56,14 +102,21 @@ def from_fisher_alignments(
     swap_by_first_speaker: bool = True,
     split: str | None = None,
     metadata: Mapping[str, Any] | None = None,
+    max_untimed_fraction: float = MAX_UNTIMED_FRACTION,
 ) -> Conversation:
     """Map historical ``{word,start,end}`` alignments to canonical words.
 
     The leading agent-side system pseudo-token is discarded. By default the
     earliest speaker becomes canonical ``user``, matching the submitted Fisher
     shard job; disable ``swap_by_first_speaker`` for authoritative roles.
+    Words without usable timing are dropped and counted in
+    ``metadata["untimed_units_dropped"]``; when a speaker loses more than
+    ``max_untimed_fraction`` of its words the conversation is flagged
+    (``metadata["untimed_fraction_exceeded"]``) and ``construct_conversation``
+    excludes it.
     """
 
+    untimed = _untimed_audit({"user": user_alignment, "agent": agent_alignment}, max_untimed_fraction)
     units = []
     for speaker, alignment in (("user", user_alignment), ("agent", agent_alignment)):
         for index, value in enumerate(alignment):
@@ -86,6 +139,7 @@ def from_fisher_alignments(
             for unit in units
         ]
     final_metadata = dict(metadata or {})
+    final_metadata.update(untimed)
     final_metadata.update(
         {
             "role_source": "first_speaker" if swap_by_first_speaker else "explicit",
@@ -116,9 +170,15 @@ def from_seamless_transcripts(
     agent_transcript: Sequence[Mapping[str, Any]],
     split: str | None = None,
     metadata: Mapping[str, Any] | None = None,
+    max_untimed_fraction: float = MAX_UNTIMED_FRACTION,
 ) -> Conversation:
-    """Map canonical-role ``{transcript,start,end}`` utterances to v1 input."""
+    """Map canonical-role ``{transcript,start,end}`` utterances to v1 input.
 
+    Utterances without usable timing are dropped and counted; see
+    :func:`from_fisher_alignments` for the ``max_untimed_fraction`` rule.
+    """
+
+    untimed = _untimed_audit({"user": user_transcript, "agent": agent_transcript}, max_untimed_fraction)
     units = []
     for speaker, transcript in (("user", user_transcript), ("agent", agent_transcript)):
         for value in transcript:
@@ -127,6 +187,8 @@ def from_seamless_transcripts(
                 units.append(
                     TranscriptUnit(unit.speaker, unit.start_s, min(unit.end_s, duration_s), unit.text)
                 )
+    final_metadata = dict(metadata or {})
+    final_metadata.update(untimed)
     return Conversation(
         conversation_id=conversation_id,
         duration_s=duration_s,
@@ -134,7 +196,7 @@ def from_seamless_transcripts(
         source="seamless",
         split=split,
         granularity="utterance",
-        metadata=dict(metadata or {}),
+        metadata=final_metadata,
     )
 
 
@@ -172,8 +234,8 @@ def resolve_seamless_roles(
     if pref_1 >= 2 and pref_0 <= -1:
         return 1, 0, "prompt", min(0.95, 0.65 + 0.05 * (pref_1 - pref_0))
 
-    first_0 = min((float(item["start"]) for item in speaker_0_transcript), default=float("inf"))
-    first_1 = min((float(item["start"]) for item in speaker_1_transcript), default=float("inf"))
+    first_0 = min((t[0] for t in map(_timing, speaker_0_transcript) if t is not None), default=float("inf"))
+    first_1 = min((t[0] for t in map(_timing, speaker_1_transcript) if t is not None), default=float("inf"))
     return (0, 1, "first_speaker", 0.25) if first_0 <= first_1 else (1, 0, "first_speaker", 0.25)
 
 

@@ -14,7 +14,8 @@
     "rollout": {"type": "object"},
     "reward": {"type": "object"},
     "grpo": {"type": "object"},
-    "optimizer": {"type": "object"}
+    "optimizer": {"type": "object"},
+    "training": {"type": "object"}
   },
   "additionalProperties": false
 }

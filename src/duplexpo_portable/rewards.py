@@ -11,9 +11,8 @@ from .schema import ActionTrace, RewardResult, Rollout, SpeechInterval, Window
 
 @dataclass(frozen=True)
 class FCDRConfig:
-    """Paper reward constants. ``legacy`` reproduces the reported checkpoint."""
+    """Paper reward constants (the reward used for the reported checkpoint)."""
 
-    mode: str = "legacy"
     backchannel_plateau_s: float = 0.5
     backchannel_max_talk_s: float = 1.5
     turn_sigma_early_s: float = 0.2
@@ -23,17 +22,10 @@ class FCDRConfig:
     false_alarm_penalty: float = -0.5
     backchannel_overlong_penalty: float = -0.5
     turn_no_eos_scale: float = 0.75
+    # Only used to derive the diagnostic ``desired_end_s`` / ``end_observable``
+    # fields (never enters the scalar reward).
     observable_margin_s: float = 0.16
     interruption_grace_s: float = 0.16
-    stop_tolerance_s: float = 0.24
-    explicit_eos_bonus: float = 0.05
-    near_target_pad_penalty: float = -0.02
-    early_stop_penalty: float = -0.15
-    late_stop_penalty: float = -0.10
-
-    def __post_init__(self) -> None:
-        if self.mode not in {"legacy", "eos_aware_v1"}:
-            raise ValueError("mode must be 'legacy' or 'eos_aware_v1'")
 
 
 class TokenTraceDecoder:
@@ -105,7 +97,6 @@ def score_fcdr(
     prediction = trace.speech[0] if trace.speech else None
     has_reference = window.reference_end_frame > window.reference_start_frame
     onset_component = 0.0
-    yielding_component = 0.0
     pattern_component = 0.0
     category = "correct_silence"
     desired_end = None
@@ -154,28 +145,23 @@ def score_fcdr(
         elif reward > 0:
             desired_end, end_target, next_user = _turn_end_target(window, config)
             end_observable = window.sample_end_s >= desired_end + config.observable_margin_s
-            if config.mode == "legacy":
-                if prediction.end_s is None:
-                    updated = reward * config.turn_no_eos_scale
-                    pattern_component = updated - reward
-                    reward = updated
-            elif end_observable:
-                if prediction.end_s is None:
-                    yielding_component = config.late_stop_penalty
-                else:
-                    stop_error = prediction.end_s - desired_end
-                    if stop_error < -config.stop_tolerance_s:
-                        yielding_component = config.early_stop_penalty
-                    elif stop_error > config.stop_tolerance_s:
-                        yielding_component = config.late_stop_penalty
-                    elif prediction.termination == "eos":
-                        yielding_component = config.explicit_eos_bonus
-                    else:
-                        yielding_component = config.near_target_pad_penalty
-                reward += yielding_component
+            # Yielding is only constrained indirectly: a positive full turn that
+            # never stops inside the window is scaled by ``turn_no_eos_scale``.
+            if prediction.end_s is None:
+                updated = reward * config.turn_no_eos_scale
+                pattern_component = updated - reward
+                reward = updated
 
     if prediction is not None and desired_end is not None and stop_error is None and prediction.end_s is not None:
         stop_error = prediction.end_s - desired_end
+    # Only ``speech[0]`` is scored. A policy can therefore emit a very short first
+    # segment (collecting the onset reward and avoiding the no-EOS scale) and then
+    # start speaking again for free. This is reported, not penalized.
+    restart_after_eos = (
+        prediction is not None
+        and prediction.end_s is not None
+        and any(interval.start_s >= prediction.end_s for interval in trace.speech[1:])
+    )
     diagnostics = {
         "category": category,
         "event_kind": window.event_kind,
@@ -192,13 +178,13 @@ def score_fcdr(
         "end_target": end_target,
         "next_user_start_s": next_user,
         "end_observable": end_observable,
-        "reward_mode": config.mode,
+        "restart_after_eos": restart_after_eos,
+        "extra_speech_segments": max(len(trace.speech) - 1, 0),
     }
     return RewardResult(
         total=reward,
         components={
             "onset": onset_component,
-            "yielding": yielding_component,
             "pattern": pattern_component,
         },
         diagnostics=diagnostics,

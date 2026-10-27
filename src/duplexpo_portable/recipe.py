@@ -43,6 +43,7 @@ def paper_window_config(*, validation: bool = False) -> WindowConfig:
         max_backchannel_windows=int(value["max_backchannel_windows"]),
         max_rollout_frames=int(value["max_rollout_frames"]),
         selection_seed=int(value["selection_seed"]),
+        reference_margin_frames=int(value.get("reference_margin_frames", 3)),
     )
 
 

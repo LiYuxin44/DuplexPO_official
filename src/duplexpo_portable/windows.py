@@ -23,10 +23,19 @@ class WindowConfig:
     max_backchannel_windows: int = 1
     max_rollout_frames: int = 200
     selection_seed: int = 42
+    # Minimum number of frames the sampled span must extend past the reference
+    # event end so that a timely stop is observable inside the window
+    # (3 frames = 0.24 s, the reward's stop tolerance). When the next event's
+    # lead would cut the span shorter than this, the span is extended (and may
+    # overlap the next window's lead); windows whose reference onset would still
+    # fall outside the span are dropped and counted.
+    reference_margin_frames: int = 3
 
     def __post_init__(self) -> None:
         if self.frame_duration_s <= 0:
             raise ValueError("frame_duration_s must be positive")
+        if self.reference_margin_frames < 0:
+            raise ValueError("reference_margin_frames must be non-negative")
         if self.lead_time_s < 0 or self.buffer_s < 0:
             raise ValueError("lead and buffer must be non-negative")
         if self.max_turn_windows < 0 or self.max_backchannel_windows < 0:
@@ -35,7 +44,7 @@ class WindowConfig:
             raise ValueError("max_rollout_frames must be positive")
 
 
-def build_windows(
+def build_windows_with_audit(
     *,
     conversation_id: str,
     split: str,
@@ -45,11 +54,21 @@ def build_windows(
     user_segments: Sequence[Segment] = (),
     conversation_metadata: Mapping[str, Any] | None = None,
     config: WindowConfig = WindowConfig(),
-) -> list[Window]:
-    """Convert ordered reference events to non-overlapping candidate windows.
+) -> tuple[list[Window], dict[str, int]]:
+    """Convert ordered reference events to candidate windows plus drop/extend counts.
 
     Frames before ``sample_start_frame`` are the teacher-forced prefix. Only
     ``[sample_start_frame, sample_end_frame)`` is sampled and optimized.
+
+    The nominal span follows the paper: ``s_i = max(e_{i-1}, (a_i - L)/Δ)`` and
+    ``e_i = min((b_i + B)/Δ, (a_{i+1} - L)/Δ, T)``. When the next event starts
+    within the lead time of this event's end, the nominal ``e_i`` can fall
+    before the reference end (or even before the reference onset), making the
+    event unscorable even for the human reference. The span is therefore
+    extended to ``reference_end + reference_margin_frames`` for *this* window
+    only; the chaining value used for the next window's ``s_{i+1}`` is left at
+    the nominal ``e_i`` so all other windows are unchanged. Windows whose
+    reference onset is still outside the span are dropped.
     """
 
     if duration_s <= 0:
@@ -58,6 +77,7 @@ def build_windows(
     total_frames = int(duration_s / frame_dur)
     ordered = sorted(agent_segments, key=lambda item: (item.start_s, item.end_s))
     windows: list[Window] = []
+    stats = {"windows_dropped_unsatisfiable": 0, "windows_extended_past_next_lead": 0}
     previous_end = 0
     for index, segment in enumerate(ordered):
         sample_start = max(previous_end, int((segment.start_s - config.lead_time_s) / frame_dur))
@@ -67,14 +87,26 @@ def build_windows(
                 previous_end,
                 int((ordered[index + 1].start_s - config.lead_time_s) / frame_dur),
             )
-            sample_end = min(raw_end, next_start)
+            nominal_end = min(raw_end, next_start)
         else:
-            sample_end = min(raw_end, total_frames)
+            nominal_end = min(raw_end, total_frames)
         reference_start = int(segment.start_s / frame_dur)
         reference_end = int(segment.end_s / frame_dur)
-        previous_end = sample_end
-        if sample_end <= sample_start:
+        previous_end = nominal_end
+        sample_end = min(raw_end, total_frames, max(nominal_end, reference_end + config.reference_margin_frames))
+        extended = sample_end - nominal_end
+        if sample_end <= sample_start or sample_end <= reference_start:
+            stats["windows_dropped_unsatisfiable"] += 1
             continue
+        if extended > 0:
+            stats["windows_extended_past_next_lead"] += 1
+        metadata = {
+            "agent_segment": segment.to_dict(),
+            "event_index": index,
+            "conversation": dict(conversation_metadata or {}),
+        }
+        if extended > 0:
+            metadata["sample_end_extended_frames"] = extended
         windows.append(
             Window(
                 window_id=f"{conversation_id}:event-{index:04d}",
@@ -88,14 +120,16 @@ def build_windows(
                 event_kind=segment.kind,
                 user_segments=tuple(user_segments),
                 source=source,
-                metadata={
-                    "agent_segment": segment.to_dict(),
-                    "event_index": index,
-                    "conversation": dict(conversation_metadata or {}),
-                },
+                metadata=metadata,
             )
         )
-    return windows
+    return windows, stats
+
+
+def build_windows(**kwargs) -> list[Window]:
+    """See :func:`build_windows_with_audit`; returns only the windows."""
+
+    return build_windows_with_audit(**kwargs)[0]
 
 
 def _stable_seed(conversation_id: str, seed: int) -> int:
@@ -183,18 +217,20 @@ def build_selected_windows(
     conversation_metadata: Mapping[str, Any] | None = None,
     config: WindowConfig = WindowConfig(),
     rng_seed: int | None = None,
+    audit: dict[str, Any] | None = None,
 ) -> list[Window]:
-    return select_windows(
-        build_windows(
-            conversation_id=conversation_id,
-            split=split,
-            source=source,
-            duration_s=duration_s,
-            agent_segments=agent_segments,
-            user_segments=user_segments,
-            conversation_metadata=conversation_metadata,
-            config=config,
-        ),
-        config,
-        rng_seed=rng_seed,
+    """Build then select windows; if ``audit`` is given, drop/extend counts are added to it."""
+
+    candidates, stats = build_windows_with_audit(
+        conversation_id=conversation_id,
+        split=split,
+        source=source,
+        duration_s=duration_s,
+        agent_segments=agent_segments,
+        user_segments=user_segments,
+        conversation_metadata=conversation_metadata,
+        config=config,
     )
+    if audit is not None:
+        audit.update(stats)
+    return select_windows(candidates, config, rng_seed=rng_seed)

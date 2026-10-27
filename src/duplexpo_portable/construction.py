@@ -55,7 +55,10 @@ class ConstructionProfile:
     merge_strategy: str = "fisher"
     fragment_max_duration_s: float = 0.30
     fragment_max_words: int = 2
-    utterance_bc_max_duration_s: float = 2.0
+    # Must not exceed FCDRConfig.backchannel_max_talk_s (1.5 s): a segment labelled
+    # "backchannel" but longer than the reward's talk ceiling is unsatisfiable even
+    # for the human reference (it is scored -0.5 by construction).
+    utterance_bc_max_duration_s: float = 1.5
     utterance_bc_max_words: int = 6
     min_cross_overlap_s: float = 0.10
     excluded_interaction_types: tuple[str, ...] = ()
@@ -84,7 +87,7 @@ def profile_named(name: str) -> ConstructionProfile:
         return ConstructionProfile(
             name="seamless_hq_v1",
             turn_merge_gap_s=1.0,
-            lexical_bc_max_duration_s=2.0,
+            lexical_bc_max_duration_s=1.5,
             lexical_bc_max_words=6,
             fallback_bc_max_duration_s=0.0,
             preserve_backchannels=True,
@@ -302,6 +305,16 @@ def construct_conversation(
             "profile": profile.name,
             "profile_sha256": profile.fingerprint(),
         }
+    if conversation.metadata.get("untimed_fraction_exceeded"):
+        # Set by the dataset adapters when a speaker lost too many units to
+        # missing timestamps; the remaining timeline is not trustworthy.
+        return [], [], {
+            "status": "excluded",
+            "reason": "untimed_fraction_exceeded",
+            "untimed_fraction": conversation.metadata.get("untimed_fraction"),
+            "profile": profile.name,
+            "profile_sha256": profile.fingerprint(),
+        }
 
     effective_duration = min(conversation.duration_s, profile.max_duration_s)
     units = [
@@ -338,6 +351,8 @@ def construct_conversation(
         "user_fragments_dropped": user_dropped,
         "agent_fragments_dropped": agent_dropped,
     }
+    if "untimed_units_dropped" in conversation.metadata:
+        audit["untimed_units_dropped"] = conversation.metadata["untimed_units_dropped"]
     return user_segments, agent_segments, audit
 
 

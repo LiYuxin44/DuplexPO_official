@@ -10,8 +10,8 @@
     "mixing_seed": 42,
     "sampling_weights": {"fisher": 1.0, "seamless_hq_v1": 1.0},
     "profile_sha256": {
-      "fisher": "f5ef275415ad37fad606011c895bddeaada08df76e9cac7123d5e40298f800a9",
-      "seamless_hq_v1": "1a64c6868997eb465c860b4dd3a02cbb5a6fb19fc22ebaa06b0c393409e03e25"
+      "fisher": "c4ca77c63aab3f25c2922faaf5dc5dde9ba2725109e071134c91b9d6debe2a9e",
+      "seamless_hq_v1": "8f175206a8720f123e5a4ab8beac2973f8a2666b7a80ecb0b0298a3d55b8aefa"
     },
     "augmentation": {
       "specaugment": {"enabled": true, "implementation": "backend_native"},
@@ -38,7 +38,7 @@
       "granularity": "utterance",
       "role_policy": "actor_then_prompt_then_first_speaker",
       "turn_merge_gap_s": 1.0,
-      "utterance_bc_max_duration_s": 2.0,
+      "utterance_bc_max_duration_s": 1.5,
       "utterance_bc_max_words": 6,
       "fragment_max_duration_s": 0.3,
       "fragment_max_words": 2,
@@ -65,6 +65,7 @@
     "max_turn_windows": 3,
     "max_backchannel_windows": 1,
     "max_rollout_frames": 200,
+    "reference_margin_frames": 3,
     "selection_seed": 42,
     "portable_selection_seed_strategy": "sha256(seed:conversation_id)",
     "historical_selection_seed_strategy": "target_token_ids[0]+target_token_ids[min(T//2,T-1)]",
@@ -76,7 +77,6 @@
     "top_p": 0.9
   },
   "reward": {
-    "mode": "legacy",
     "backchannel_plateau_s": 0.5,
     "backchannel_max_talk_s": 1.5,
     "turn_sigma_early_s": 0.2,
@@ -86,12 +86,7 @@
     "backchannel_overlong_penalty": -0.5,
     "turn_no_eos_scale": 0.75,
     "observable_margin_s": 0.16,
-    "interruption_grace_s": 0.16,
-    "stop_tolerance_s": 0.24,
-    "explicit_eos_bonus": 0.05,
-    "near_target_pad_penalty": -0.02,
-    "early_stop_penalty": -0.15,
-    "late_stop_penalty": -0.1
+    "interruption_grace_s": 0.16
   },
   "grpo": {
     "group_key": "window_id",
@@ -114,5 +109,22 @@
     "scheduler": "inverse_square_root",
     "warmup_steps": 100,
     "minimum_learning_rate": 1e-6
+  },
+  "training": {
+    "parameterization": "full_parameter",
+    "trainable_modules": "llm_backbone",
+    "frozen_modules": ["speech_encoder", "codec"],
+    "total_steps": null,
+    "windows_per_step": null,
+    "rollouts_per_step": null,
+    "samples_per_window": 4,
+    "gpus": {"count": 64, "type": "A800-80GB"},
+    "precision": "bfloat16",
+    "gradient_clip_norm": 1.0,
+    "notes": [
+      "learning_rate 1e-5 in `optimizer` is the full-parameter RL learning rate.",
+      "With LoRA adapters the policy does not move within tens of steps at lr 1e-5; use roughly 10x (about 1e-4) and tune.",
+      "rollouts_per_step = windows_per_step * samples_per_window."
+    ]
   }
 }
