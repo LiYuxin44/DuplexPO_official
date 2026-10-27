@@ -24,6 +24,7 @@
     },
     "fisher": {
       "granularity": "word",
+      "alignment_source": "nemo_forced_aligner",
       "role_policy": "first_speaker_becomes_user",
       "word_gap_s": 0.3,
       "turn_merge_gap_s": 1.2,

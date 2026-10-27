@@ -60,7 +60,7 @@ class ConformanceRecipeTest(unittest.TestCase):
         fisher = profile_named("fisher")
         self.assertEqual(recipe["construction"]["profile_sha256"]["fisher"], fisher.fingerprint())
         for key, value in recipe["construction"]["fisher"].items():
-            if key not in {"granularity", "role_policy"}:
+            if key not in {"granularity", "role_policy", "alignment_source"}:
                 self.assertEqual(getattr(fisher, key), value)
         seamless = profile_named("seamless")
         self.assertEqual(recipe["construction"]["profile_sha256"]["seamless_hq_v1"], seamless.fingerprint())

@@ -8,10 +8,16 @@ assumes Fisher filenames, Seamless directory layout, SHAR, or Lhotse.
 `adapters/datasets.py` provides dependency-free mappings for the historical
 alignment/utterance dictionaries once the caller has explicitly resolved roles.
 
-For Fisher, the paper-time source contained word alignments for two channels;
-the submitted constructor used `swap_by_first_speaker`, so the earliest speaker
-became canonical `user` and the audio-channel mapping was swapped with it.
-The built-in `fisher` profile performs:
+For Fisher, the paper-time source contained word alignments for two channels,
+produced by running the [NeMo Forced Aligner](https://docs.nvidia.com/nemo-framework/user-guide/latest/nemotoolkit/tools/nemo_forced_aligner.html)
+(NFA) on each channel against its transcript; each word becomes
+`{"word", "start", "end"}` in seconds. Any word-level aligner with the same
+output shape can be used instead. Words whose `start`/`end` are missing are
+dropped and counted (`untimed_units_dropped`); a conversation is excluded when
+more than 20% of either side's words are untimed. The submitted constructor
+used `swap_by_first_speaker`, so the earliest speaker became canonical `user`
+and the audio-channel mapping was swapped with it. The built-in `fisher`
+profile performs:
 
 1. clip to 210 seconds;
 2. group same-speaker words separated by no more than 0.30 seconds;
