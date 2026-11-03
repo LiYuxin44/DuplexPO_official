@@ -1,0 +1,50 @@
+name: Publish to PyPI
+
+# Publishes the package when a version tag (v0.1.0, v0.2.0, ...) is pushed, or
+# on manual dispatch. Uses PyPI trusted publishing (OIDC): no API token is
+# stored in the repository. The PyPI project must list this repository,
+# this workflow file, and the `pypi` environment as a trusted publisher.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check dist/*
+      - name: Smoke-test the wheel
+        run: |
+          python -m pip install dist/*.whl
+          cd "$(mktemp -d)"
+          duplexpo --help
+          python -c "import duplexpo_portable, importlib.resources as r; print(r.files('duplexpo_portable').joinpath('recipes/paper_v1.json').read_text()[:80])"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/duplexpo/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

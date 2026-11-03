@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Unit tests
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Install package and reproduce conformance vectors
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+          tmp="$(mktemp -d)"
+          duplexpo construct --profile fisher \
+            --input examples/conversations.jsonl \
+            --output "$tmp/windows.jsonl" \
+            --audit-output "$tmp/audit.jsonl"
+          duplexpo prepare \
+            --windows "$tmp/windows.jsonl" \
+            --rollouts examples/rollouts.jsonl \
+            --output "$tmp/grpo_records.jsonl"
+          duplexpo conformance \
+            --windows "$tmp/windows.jsonl" \
+            --rollouts examples/rollouts.jsonl \
+            --records "$tmp/grpo_records.jsonl"
+          cmp "$tmp/windows.jsonl" examples/expected/windows.jsonl
+          cmp "$tmp/audit.jsonl" examples/expected/audit.jsonl
+          cmp "$tmp/grpo_records.jsonl" examples/expected/grpo_records.jsonl

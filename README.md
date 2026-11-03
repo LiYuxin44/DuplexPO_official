@@ -1,10 +1,30 @@
 # DuplexPO
 
-Reference implementation of the data construction, reward and event-level GRPO
-objective from *Decoupling Conversational Dynamics in Full-Duplex Spoken Models
-through Reinforcement Learning* ([arXiv:2607.07148](https://arxiv.org/abs/2607.07148)).
+**Decoupling Conversational Dynamics in Full-Duplex Spoken Models through Reinforcement Learning**
+(NeurIPS 2026)
 
-The package is framework-neutral and covers:
+[![arXiv](https://img.shields.io/badge/arXiv-2607.07148-b31b1b.svg)](https://arxiv.org/abs/2607.07148)
+[![Demo](https://img.shields.io/badge/Demo-audio%20samples-2ea44f.svg)](https://liyuxin44.github.io/DuplexPO/)
+[![PyPI](https://img.shields.io/pypi/v/duplexpo.svg)](https://pypi.org/project/duplexpo/)
+[![CI](https://github.com/LiYuxin44/DuplexPO_official/actions/workflows/ci.yml/badge.svg)](https://github.com/LiYuxin44/DuplexPO_official/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/LiYuxin44/DuplexPO_official/blob/main/LICENSE)
+
+[Paper](https://arxiv.org/abs/2607.07148) · [Demo page](https://liyuxin44.github.io/DuplexPO/) · [Algorithm notes](https://github.com/LiYuxin44/DuplexPO_official/blob/main/docs/ALGORITHM.md) · [Adapter guide](https://github.com/LiYuxin44/DuplexPO_official/blob/main/docs/ADAPTER_GUIDE.md)
+
+DuplexPO teaches a full-duplex spoken dialogue model *when* to speak without
+changing *what* it says: RL over short dynamics-critical windows of real human
+conversation, scored by the Factorized Conversational Dynamics Reward (FCDR),
+with a KL anchor to the instruction-tuned SFT model. The model's turn-taking,
+backchanneling, and barge-in handling improve while QA, instruction-following,
+and reasoning benchmarks are maintained.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/LiYuxin44/DuplexPO_official/main/assets/duplexpo_overview.png" alt="DuplexPO overview: dynamics-critical windows around backchannels, turn-taking, and barge-in; rollouts are scored by FCDR and optimized with GRPO" width="100%">
+</p>
+
+This repository is the reference implementation of the data construction,
+reward, and event-level GRPO objective from the paper. The package is
+framework-neutral and covers:
 
 1. constructing dynamics-critical events (windows) from aligned full-duplex
    dialogue (Fisher-style word alignments, Seamless-style utterances, or any
@@ -48,29 +68,48 @@ GRPORecord {window, group_id, reward, advantage, action_ids, loss_mask, ref_logp
 The schemas under `src/duplexpo_portable/schemas/` are the public compatibility
 boundary. Framework adapters are deliberately thin and disposable.
 
-## Quick start
-
-From this directory, run the complete synthetic example without installing any
-dependencies:
+## Install
 
 ```bash
-PYTHONPATH=src python -m duplexpo_portable.cli construct \
+pip install duplexpo
+```
+
+This installs the `duplexpo_portable` package and the `duplexpo` command.
+Python 3.9+ and no third-party dependencies. For the development version:
+
+```bash
+git clone https://github.com/LiYuxin44/DuplexPO_official.git
+cd DuplexPO_official
+pip install -e .
+```
+
+## Quick start
+
+Run the complete synthetic example (window construction, FCDR scoring, GRPO
+records, and conformance checks) from a clone of this repository:
+
+```bash
+duplexpo construct \
   --profile fisher \
   --input examples/conversations.jsonl \
   --output /tmp/duplexpo-windows.jsonl \
   --audit-output /tmp/duplexpo-audit.jsonl \
   --segments-output /tmp/duplexpo-segments.jsonl
 
-PYTHONPATH=src python -m duplexpo_portable.cli prepare \
+duplexpo prepare \
   --windows /tmp/duplexpo-windows.jsonl \
   --rollouts examples/rollouts.jsonl \
   --output /tmp/duplexpo-grpo.jsonl
 
-PYTHONPATH=src python -m duplexpo_portable.cli conformance \
+duplexpo conformance \
   --windows /tmp/duplexpo-windows.jsonl \
   --rollouts examples/rollouts.jsonl \
   --records /tmp/duplexpo-grpo.jsonl
 ```
+
+Without installing, `PYTHONPATH=src python -m duplexpo_portable.cli` is a
+drop-in replacement for `duplexpo`. The window, audit, and GRPO-record outputs
+match `examples/expected/` byte for byte (`examples/README.md`).
 
 `--segments-output` holds the user/agent segments the reward is defined on;
 render the teacher-forced prefix of each window from it (see

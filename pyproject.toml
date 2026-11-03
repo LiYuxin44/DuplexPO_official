@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "duplexpo-portable"
+name = "duplexpo"
 version = "0.1.0"
-description = "Framework-neutral data construction and event-level GRPO for full-duplex conversational models"
+description = "Framework-neutral data construction, FCDR reward, and event-level GRPO for full-duplex spoken dialogue models (DuplexPO, NeurIPS 2026)"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
@@ -17,10 +17,36 @@ authors = [
   {name = "Zhehuai Chen"},
   {name = "Chen Chen"},
 ]
-urls = {Paper = "https://arxiv.org/abs/2607.07148"}
-license = {file = "LICENSE"}
-classifiers = ["License :: OSI Approved :: MIT License"]
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = [
+  "full-duplex",
+  "spoken-dialogue",
+  "speech-language-model",
+  "turn-taking",
+  "backchannel",
+  "barge-in",
+  "reinforcement-learning",
+  "grpo",
+  "reward",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://liyuxin44.github.io/DuplexPO/"
+Repository = "https://github.com/LiYuxin44/DuplexPO_official"
+Paper = "https://arxiv.org/abs/2607.07148"
+Issues = "https://github.com/LiYuxin44/DuplexPO_official/issues"
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
