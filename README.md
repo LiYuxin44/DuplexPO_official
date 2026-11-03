@@ -12,22 +12,25 @@ The package is framework-neutral and covers:
 2. scoring arbitrary policy rollouts with the FCDR reward and turning them into
    event-grouped GRPO training records (advantages, loss mask, KL reference).
 
-It has no runtime dependency on NeMo, Lhotse, TRL, verl, a checkpoint, or a
-particular speech-token vocabulary.
+It runs on the Python standard library alone (PyTorch is needed only for the
+optional `torch_batch_loss` helper) and works with any speech-token vocabulary,
+trainer, or runtime.
 
-## Scope
+## What this repository provides
 
-Included: transcript canonicalization adapters, construction profiles, window
-construction/selection, reward, grouped advantages, the reference loss formula
-(`torch_batch_loss`), a machine-readable recipe with hashes, and conformance
-checks for outside adapters.
+- transcript canonicalization adapters and the Fisher / Seamless construction
+  profiles, with the exact thresholds used for the paper;
+- dynamics-critical window construction and deterministic selection;
+- the FCDR reward with two token decoders;
+- event-grouped advantages and the reference GRPO loss (`torch_batch_loss`);
+- a machine-readable recipe (`recipes/paper_v1.json`) with content hashes;
+- conformance checks and hashed example outputs for validating outside adapters.
 
-Not included: the trainer and the model. The paper checkpoint was trained with
-the NeMo Toolkit on top of the Nemotron-VoiceChat recipe (Qwen2.5-7B-Instruct
-backbone, Parakeet encoder, CosyVoice2 codec). Reproducing it end to end needs
-that stack plus licensed Fisher / Seamless Interaction data; this repository
-makes the data construction and the objective reproducible and lets any policy
-plug in through `Rollout` / `TraceDecoder`.
+The paper checkpoint was trained with the NeMo Toolkit on top of the
+Nemotron-VoiceChat recipe (Qwen2.5-7B-Instruct backbone, Parakeet encoder,
+CosyVoice2 codec) on licensed Fisher / Seamless Interaction data. Any policy
+trained in that stack or another one plugs in through `Rollout` /
+`TraceDecoder`; `docs/ADAPTER_GUIDE.md` walks through the integration.
 
 ## Stable boundary
 
@@ -123,13 +126,12 @@ See `docs/ALGORITHM.md` for equations and fidelity notes.
 - `docs/`: `ALGORITHM.md` (windows, reward, loss, training setup),
   `DATA_CONSTRUCTION.md`, `PROTOCOL.md`, `ADAPTER_GUIDE.md`.
 
-## What is not bundled
+## Data
 
-Fisher and Seamless Interaction audio/transcripts, model checkpoints, and
-third-party model code are not redistributed. Dataset adapters must canonicalize
-licensed source data into `Conversation` records. Audio paths or tensors can be
-carried through `metadata`; the construction and GRPO protocol itself does not
-read audio.
+Dataset adapters (`adapters/datasets.py`) canonicalize licensed Fisher and
+Seamless Interaction transcripts into `Conversation` records. Audio paths or
+tensors travel through `metadata`; the construction and GRPO protocol operate on
+timing metadata only, so the pipeline runs on transcripts alone.
 
 ## Citation
 
@@ -145,5 +147,5 @@ read audio.
 ## License
 
 The code in this repository is released under the [MIT License](LICENSE).
-Dataset audio/transcripts, model checkpoints, and third-party model code are
-not included or relicensed.
+Datasets, model checkpoints, and third-party model code retain their original
+licenses.
