@@ -5,7 +5,7 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2607.07148-b31b1b.svg)](https://arxiv.org/abs/2607.07148)
 [![Demo](https://img.shields.io/badge/Demo-audio%20samples-2ea44f.svg)](https://liyuxin44.github.io/DuplexPO/)
-[![PyPI](https://img.shields.io/pypi/v/duplexpo.svg)](https://pypi.org/project/duplexpo/)
+[![PyPI](https://img.shields.io/pypi/v/duplexpo?label=pypi&color=3775A9)](https://pypi.org/project/duplexpo/)
 [![CI](https://github.com/LiYuxin44/DuplexPO_official/actions/workflows/ci.yml/badge.svg)](https://github.com/LiYuxin44/DuplexPO_official/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/LiYuxin44/DuplexPO_official/blob/main/LICENSE)
 
